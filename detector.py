@@ -71,7 +71,6 @@ def determine_action(player_cards, dealer_upcard, total, soft, is_pair, busted, 
     if busted:
         return "You lose"
 
-    # Get dealer upcard value (add a suit to make it compatible with get_value_of_card function)
     dealer_value = get_value_of_card(dealer_upcard)
 
     if len(player_cards) == 2:
@@ -128,46 +127,35 @@ def assign_cards_by_position(predictions):
     if len(predictions) <= 1:
         return predictions, None
     
-    # Extract card positions (center coordinates)
     card_positions = np.array([[p["bbox"]["x"], p["bbox"]["y"]] for p in predictions])
     
-    # Use DBSCAN clustering to group cards by proximity
     clustering = DBSCAN(eps=200, min_samples=1).fit(card_positions)
     labels = clustering.labels_
     
-    # Count number of clusters
     num_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     
     if num_clusters <= 1:
-        # If only one cluster, assume all cards are player's cards
         return predictions, None
     
-    # Identify the most common cluster (likely the player's hand)
     unique_labels, counts = np.unique(labels, return_counts=True)
     player_cluster = unique_labels[np.argmax(counts)]
     
-    # For dealer cards, find the card that's most isolated
-    # Calculate average distance from each card to others
+
     avg_distances = []
     for i, pos in enumerate(card_positions):
         distances = np.linalg.norm(card_positions - pos, axis=1)
-        # Exclude self-distance
         other_distances = distances[distances > 0]
         avg_distances.append(np.mean(other_distances) if len(other_distances) > 0 else float('inf'))
     
-    # The card with the highest average distance to others is likely the dealer's card
-    # (but only if it's not in the player's cluster)
+
     candidate_indices = [i for i, label in enumerate(labels) if label != player_cluster]
     
-    # If no candidates, take the card with highest average distance
     if not candidate_indices:
         dealer_idx = np.argmax(avg_distances)
     else:
-        # Find the candidate with highest average distance
         candidate_distances = [avg_distances[i] for i in candidate_indices]
         dealer_idx = candidate_indices[np.argmax(candidate_distances)]
     
-    # Split into dealer and player cards
     dealer_card = predictions[dealer_idx]
     player_cards = [p for i, p in enumerate(predictions) if i != dealer_idx]
     
@@ -225,29 +213,22 @@ while True:
                 }
             })
 
-    # Count unique cards (deduplicate cards of the same suit and value)
     unique_cards = {}
     for p in predictions:
-        # Use the card class as the key to identify duplicates
         if p["class"] not in unique_cards:
             unique_cards[p["class"]] = p
         else:
-            # For duplicate cards, keep the one with higher confidence
             if p["confidence"] > unique_cards[p["class"]]["confidence"]:
                 unique_cards[p["class"]] = p
 
-    # Get card predictions
     cards = list(unique_cards.values())
     
-    # Assign cards to player or dealer based on position
     player_cards, dealer_card = assign_cards_by_position(cards)
     
-    # Get dealer upcard if available
     dealer_upcard = None
     if dealer_card:
         dealer_upcard = suitless(dealer_card["class"])
     
-    # Calculate player's hand
     soft = False
     is_pair = len(player_cards) == 2 and (len(player_cards) > 0 and 
                                          rank_of(player_cards[0]["class"]) == 
@@ -265,7 +246,6 @@ while True:
     is_blackjack = len(player_cards) == 2 and total == 21
     busted = total > 21
 
-    # Adjust for aces if busted
     if busted and number_of_aces > 0:
         while number_of_aces > 0 and total > 21:
             total -= 10
@@ -274,18 +254,15 @@ while True:
         busted = total > 21
         soft = number_of_aces > 0
 
-    # Determine action only if we have player cards and dealer upcard
     action = "Place cards on camera" 
     if player_cards and dealer_upcard:
         action = determine_action(player_cards, dealer_upcard, total, soft, is_pair, busted, is_blackjack)
 
-    # Draw info panel
     info_panel_height = 140
     alpha = 0.7 
     cv2.rectangle(overlay, (0, 0), (frame_width, info_panel_height), COLOR_THEME["background"], -1)
     cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
 
-    # Draw all detected cards
     for i, pred in enumerate(cards):
         x, y, w, h = pred["bbox"]["x"], pred["bbox"]["y"], pred["bbox"]["width"], pred["bbox"]["height"]
         x1, y1 = int(x - w / 2), int(y - h / 2)
@@ -294,11 +271,9 @@ while True:
         card_value = get_value_of_card(pred["class"])
         card_label = f"{pred['class']} ({card_value})"
         
-        # Color cards differently based on player/dealer assignment
         is_dealer = pred == dealer_card
         color = COLOR_THEME["dealer_card"] if is_dealer else COLOR_THEME["player_card"]
         
-        # Add additional highlight for aces
         if is_an_ace(pred["class"]):
             thickness = 5
         else:
@@ -306,7 +281,6 @@ while True:
             
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
         
-        # Add role label (Player/Dealer)
         role = "Dealer" if is_dealer else "Player"
         label = f"{role}: {card_label}"
         
@@ -314,7 +288,6 @@ while True:
         cv2.rectangle(frame, (x1, y1 - text_size[1] - 10), (x1 + text_size[0] + 10, y1), color, -1)
         cv2.putText(frame, label, (x1 + 5, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
-    # Display FPS
     current_time = time.time()
     if prev_time:
         past_frame_times.append(current_time - prev_time)
@@ -326,7 +299,6 @@ while True:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, COLOR_THEME["text"], 2)
     prev_time = current_time
 
-    # Display card counts
     unique_card_count = len(cards)
     player_card_count = len(player_cards)
     cv2.putText(frame, f"Cards: {unique_card_count}", (frame_width - 220, 60), 
@@ -336,7 +308,6 @@ while True:
     cv2.putText(frame, f"Dealer: {1 if dealer_card else 0}", (frame_width - 220, 120), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, COLOR_THEME["text"], 2)
 
-    # Display hand state
     hand_state = "Find a Blackjack Hand" if not player_cards else (
         f"BUST ({total})" if busted else
         "BLACKJACK!" if is_blackjack else
@@ -350,7 +321,6 @@ while True:
     cv2.putText(frame, hand_state, (20, 80), 
                 cv2.FONT_HERSHEY_SIMPLEX, 1, COLOR_THEME["text"], 2)
     
-    # Display action with appropriate color
     action_color = COLOR_THEME["text"]
     if action == "HIT":
         action_color = COLOR_THEME["hit"]
