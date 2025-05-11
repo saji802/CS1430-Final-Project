@@ -19,11 +19,11 @@ window_name = "21"
 cv2.namedWindow(window_name)
 
 def suitless(cls):
-    """Remove suit from card class if present."""
+    '''Remove suit from card class'''
     return cls.upper().rstrip('CDHS')
 
 def rank_of(cls):
-    """Get the readable rank name of a card."""
+    '''Get the name of a card's number'''
     ranks = {
         "2": "Two", "3": "Three", "4": "Four", "5": "Five", "6": "Six",
         "7": "Seven", "8": "Eight", "9": "Nine", "10": "Ten",
@@ -32,13 +32,13 @@ def rank_of(cls):
     return ranks.get(suitless(cls))
 
 def pluralize(cls):
-    """Pluralize a card rank name."""
+    '''Pluralize the card name'''
     if cls == "Six":
         return "Sixes"
     return cls + "s"
 
 def get_value_of_card(cls):
-    """Get the numerical value of a card for blackjack."""
+    '''Get the numerical value of a card'''
     rank = suitless(cls)
     if rank in ["J", "Q", "K", "10"]:
         return 10
@@ -47,27 +47,27 @@ def get_value_of_card(cls):
     return int(rank) if rank.isdigit() else 0
 
 def is_an_ace(cls):
-    """Check if a card is an ace."""
+    '''Check if a card is an ace'''
     return suitless(cls) == "A"
 
 def determine_action(player_cards, dealer_upcard, total, soft, is_pair, busted, is_blackjack):
-    """
+    '''
     Determine the best action for the current hand.
     
     Args:
         player_cards: List of player's cards
         dealer_upcard: Dealer's face-up card
         total: Total value of player's hand
-        soft: Boolean indicating if hand is soft (contains an ace counted as 11)
+        soft: Boolean indicating if hand is soft
         is_pair: Boolean indicating if hand is a pair
-        busted: Boolean indicating if hand is busted (over 21)
+        busted: Boolean indicating if hand is busted
         is_blackjack: Boolean indicating if hand is blackjack
         
     Returns:
         String with recommended action
-    """
+    '''
     if is_blackjack:
-        return "Blackjack!"
+        return "Blackjack"
     if busted:
         return "You lose"
 
@@ -115,7 +115,7 @@ def determine_action(player_cards, dealer_upcard, total, soft, is_pair, busted, 
             return "STAND"
 
 def assign_cards_by_position(predictions):
-    """
+    '''
     Assign cards to player or dealer based on spatial clustering.
     
     Args:
@@ -123,7 +123,7 @@ def assign_cards_by_position(predictions):
         
     Returns:
         Tuple of (player_cards, dealer_upcard)
-    """
+    '''
     if len(predictions) <= 1:
         return predictions, None
     
