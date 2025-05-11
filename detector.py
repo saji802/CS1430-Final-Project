@@ -69,7 +69,7 @@ def determine_action(player_cards, dealer_upcard, total, soft, is_pair, busted, 
     if is_blackjack:
         return "Blackjack"
     if busted:
-        return "You lose"
+        return "Bust"
 
     dealer_value = get_value_of_card(dealer_upcard)
 
@@ -309,7 +309,7 @@ while True:
     cv2.putText(frame, action, (25, 125), cv2.FONT_HERSHEY_SIMPLEX, 1.5, action_color, 3)
 
     instructions = "Press 'q' to exit"
-    cv2.putText(frame, instructions, (frame_width // 2 - 280, frame_height - 20), 
+    cv2.putText(frame, instructions, (frame_width // 2 - 60, frame_height - 20), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, COLOR_THEME["text"], 2)
     cv2.imshow(window_name, frame)
 
